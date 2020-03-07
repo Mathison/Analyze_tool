@@ -61,7 +61,7 @@ def isEnglish(s):
     else:
         return True
 
-def get_data_text(f):
+def get_data_text(f,platform):
     data = []
     for index,line in enumerate(f):
         ori_data = json.loads(line)
@@ -150,11 +150,11 @@ def read_json(file,platform):
     data = []
     try:
         with open(file,'r',encoding = 'utf-8') as f:
-            data = get_data_text(f)
+            data = get_data_text(f,platform)
     except Exception as e:
         print(e)
         with open(file,'r',encoding = 'utf-16') as f:
-            data = get_data_text(f)
+            data = get_data_text(f,platform)
     return data
 
 ###########used to go through the folder, and collect the tweet data
@@ -163,8 +163,8 @@ def read_folder(path,platform):
     data = []
     read = 0
     for filename in sorted(os.listdir(path)):
-        print('Read '+path+filename)
-        d = read_json(path+filename,platform)
+        print('Read ' + path + filename)
+        d = read_json(path + filename,platform)
         data.extend(d)
     return data
 
@@ -221,10 +221,12 @@ def get_instagram_comments(data):
 
 def get_twitter_text(data):
     flattern_data = flatten(data)
-    text = data['text']
+    text = data['full_text']
+    '''
     for key in flattern_data:
         if key.split('.')[-1] == 'full_text':
             text = flattern_data[key]
+    '''
     return text  
 
 ###########get text from the list file
@@ -354,7 +356,7 @@ if __name__ == '__main__':
     
     if len(command) == 1 and option == "--help":
         print("#########################################"+\
-              "\nCommand 'analyze_data.py vocab vocab_path index_path' \
+              "\nCommand 'analyze_data.py vocab vocab_path index_path platform' \
               \nWill write the vocabulary of the json data based on 'json_path' to 'vocab_path' \
               \nThen write index of the text to 'output_path' \
               \nCommand 'analyze_data.py BTM vocab_path index_path btm_path num_topics' \
@@ -367,7 +369,7 @@ if __name__ == '__main__':
         index_path = command[2]
         json_path = command[3]  ##path of the folder of json data when option = 'vocab'
                                 ##when option == 'BTM' this is the path to the index file
-
+        platform = command[4]
         #json_path = ['./scraper_data/twitter/opioids/xannax/','./scraper_data/twitter/opioids/xanax/']
         #json_path = ['./scraper_data/tumblr/opioids/xannax/','./scraper_data/tumblr/opioids/xanax/']
         #json_path = ['/data2/opioids/tumblr/opioids_data/opioids/']
@@ -382,11 +384,11 @@ if __name__ == '__main__':
             for index,filename in enumerate(sorted(os.listdir(j_path))):  
                 print(filename)
                 if filename[-5:] == '.json':
-                    text_list = read_json(j_path+filename)
+                    text_list = read_json(j_path+filename,platform)
                 elif os.path.exists(j_path + filename + '/'):
                     print(index)
                     j_file = j_path + filename + '/'
-                    text_list = read_folder(j_file)
+                    text_list = read_folder(j_file,platform)
                 else:
                     continue
                 print("Number of text is " + str(len(text_list)))
