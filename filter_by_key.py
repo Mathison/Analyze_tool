@@ -7,17 +7,20 @@ from nltk.corpus import stopwords
 import re
 import collections
 
-keywords = ['wickr','whatsapp','paypal','kik','telegram','quality','overnight','cashapp','deliver','bitcoin','mg']
+#####input keywords that need to be filtered
+keywords = []
 
 ###########used to read a single json file, it will return a list of orginal tweet information
 def read_json(file,platform):
+    print('Read file ' + file)
     data = []
     try:
         with open(file,'r',encoding = 'utf-8') as f:
             for index,line in enumerate(f):
-                ori_data = json.loads(line)
+                
         
                 try:
+                    ori_data = json.loads(line)
                     if line.strip():
                         if platform == 'youtube_comment':
                         #####clean the original json file
@@ -37,6 +40,9 @@ def read_json(file,platform):
                         #####clean the original json file
                             comments = get_instagram_comments(ori_data)
                             ori_data['comments'] = []
+                            ori_data['edge_media_preview_comment'] = []
+                            ori_data['edge_media_to_parent_comment'] = []
+
                             for com in comments:
                                 com_text = com['node']['text']
                                 if check(com_text,keywords): 
@@ -79,6 +85,8 @@ def read_json(file,platform):
 
                         if platform == 'reddit_description':
                         #####clean the original json file
+                            if 'post' not in ori_data:
+                                continue
                             for p_key in ori_data['post']:
                                 ori_data = ori_data['post'][p_key]
                             text = get_reddit_text(ori_data)
@@ -87,6 +95,8 @@ def read_json(file,platform):
 
                         if platform == 'reddit_comment':
                         #####clean the original json file
+                            if 'comments' not in ori_data:
+                                continue
                             comments_dict = dict(ori_data['comments'])
                             ori_data['comments'] = []
                             ori_data['comment_result'] = {}
@@ -110,14 +120,16 @@ def read_json(file,platform):
 
                 except Exception as e:
                     print(e)
+                    #print(ori_data['post'])
                     #print(comments_dict[com_key])
                     print("can't open line "+str(index))
     except Exception as e:
         print(e)
         with open(file,'r',encoding = 'utf-16') as f:
             for index,line in enumerate(f):
-                ori_data = json.loads(line)
+                
                 try:
+                    ori_data = json.loads(line)
                     if line.strip():
                         if platform == 'youtube_comment':
                         #####clean the original json file
@@ -137,6 +149,8 @@ def read_json(file,platform):
                         #####clean the original json file
                             comments = get_instagram_comments(ori_data)
                             ori_data['comments'] = []
+                            ori_data['edge_media_preview_comment'] = []
+                            ori_data['edge_media_to_parent_comment'] = []
                             for com in comments:
                                 com_text = com['node']['text']
                                 if check(com_text,keywords): 
@@ -179,6 +193,8 @@ def read_json(file,platform):
 
                         if platform == 'reddit_description':
                         #####clean the original json file
+                            if 'post' not in ori_data:
+                                continue
                             for p_key in ori_data['post']:
                                 ori_data = ori_data['post'][p_key]
                             text = get_reddit_text(ori_data)
@@ -187,6 +203,8 @@ def read_json(file,platform):
 
                         if platform == 'reddit_comment':
                         #####clean the original json file
+                            if 'comment' not in ori_data:
+                                continue
                             comments_dict = dict(ori_data['comments'])
                             ori_data['comments'] = []
                             ori_data['comment_result'] = {}
@@ -264,7 +282,10 @@ def flatten(d, parent_key='', sep='.'):
 
 def get_twitter_text(data):
     flattern_data = flatten(data)
-    text = data['text']
+    try:
+        text = data['full_text']
+    except:
+        text = data['text']
     for key in flattern_data:
         if key.split('.')[-1] == 'full_text':
             text = flattern_data[key]
@@ -305,7 +326,7 @@ def get_youtube_comments_text(data):
 
 
 def check(text,keywords):
-    if check_key(text,keywords) or check_link_with_pharm(text): #or check_link(text): # or check_phone(text):
+    if check_key(text,keywords): #or check_link(text): # or check_phone(text):
         return True
     else:
         return False
