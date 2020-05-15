@@ -456,15 +456,24 @@ if __name__ == '__main__':
     file_list = []
     file_dict = {}
     read = 0
+
+    ######change the start and end time to collect a certain period of data
+    start_time = '20200303'
+    end_time = '20200412'
+
     for index,filename in enumerate(sorted(os.listdir(json_path))):
-        '''
-        if filename == '20200303':
+        
+        
+        if filename == start_time:
             read = 1
-        if filename == '20200412':
-            read = 0
+
         if read == 0:
             continue
-        '''
+
+        if filename == end_time:
+            read = 0
+        
+        
         print("Write file " + filename)
         for key in keywords:
             if not os.path.exists(target_path + key):
