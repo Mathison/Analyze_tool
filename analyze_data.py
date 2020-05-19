@@ -61,7 +61,7 @@ def isEnglish(s):
     else:
         return True
 
-def get_data_text(f,platform):
+def get_data_text(f):
     data = []
     for index,line in enumerate(f):
         ori_data = json.loads(line)
@@ -96,8 +96,8 @@ def get_data_text(f,platform):
                         
                 if platform == 'twitter':
                 #####clean the original json file
-                    com_text = get_twitter_text(ori_data)
-                    data.append(com_text) 
+                    text = get_twitter_text(ori_data)
+                    data.append(text) 
                            
                 if platform == 'tumblr_comment':
                 #####clean the original json file
@@ -143,29 +143,30 @@ def get_data_text(f,platform):
 
         except Exception as e:
             print(e)
+            print(ori_data)
             print("can't open line "+str(index))
     return data
 
 def read_json(file,platform):
-    data = []
+    text_data = []
     try:
         with open(file,'r',encoding = 'utf-8') as f:
-            data = get_data_text(f,platform)
+            text_data = get_data_text(f)
     except Exception as e:
         print(e)
         with open(file,'r',encoding = 'utf-16') as f:
-            data = get_data_text(f,platform)
-    return data
+            text_data = get_data_text(f)
+    return text_data
 
 ###########used to go through the folder, and collect the tweet data
 ###########it will return the list of tweets in all files in the folder
 def read_folder(path,platform):
-    data = []
+    total_data = []
     read = 0
     for filename in sorted(os.listdir(path)):
         print('Read ' + path + filename)
-        d = read_json(path + filename,platform)
-        data.extend(d)
+        d = read_json(path+filename,platform)
+        total_data.extend(d)
     return data
 
 def get_reddit_text(data):
@@ -204,11 +205,9 @@ def get_instagram_comments(data):
         preview_num = 0
         parent_num = 0
         if 'edge_media_to_parent_comment' in data:
-            #print('yes parent')
             parent_num = len(data['edge_media_to_parent_comment']['edges'])
         
         if 'edge_media_preview_comment' in data:
-            #print('yes preview')
             preview_num = len(data['edge_media_preview_comment']['edges'])
         
         print(parent_num,preview_num)
@@ -220,14 +219,20 @@ def get_instagram_comments(data):
 
 
 def get_twitter_text(data):
-    flattern_data = flatten(data)
-    text = data['full_text']
-    '''
-    for key in flattern_data:
-        if key.split('.')[-1] == 'full_text':
-            text = flattern_data[key]
-    '''
-    return text  
+    if 'retweeted_status'in data:
+        try:
+            text = data['retweeted_status']['extended_tweet']['full_text']
+        except:
+            text = data['retweeted_status']['text']
+    else:
+        try:
+            text = data['extended_tweet']['full_text']
+        except:
+            if 'full_text' in data:
+                text = data['full_text']
+            else:
+                text = data['text']
+    return text 
 
 ###########get text from the list file
 ###########it will collect the text in it
@@ -241,7 +246,7 @@ def flatten(d, parent_key='', sep='.'):
             items.extend(flatten(v, new_key, sep=sep).items())
         else:
             items.append((new_key, v))
-    return dict(items)
+    return dict(items) 
 
 ###########get words from one single clean text, return a list of words
 def get_word(text):
@@ -356,8 +361,8 @@ if __name__ == '__main__':
     
     if len(command) == 1 and option == "--help":
         print("#########################################"+\
-              "\nCommand 'analyze_data.py vocab vocab_path index_path platform' \
-              \nWill write the vocabulary of the json data based on 'json_path' to 'vocab_path' \
+              "\nCommand 'analyze_data.py vocab vocab_path index_path j_path platform' \
+              \nWill write the vocabulary of the json data based on 'j_path' to 'vocab_path' \
               \nThen write index of the text to 'output_path' \
               \nCommand 'analyze_data.py BTM vocab_path index_path btm_path num_topics' \
               \nWill apply BTM to index data in 'input_path' and write result to 'btm_path'"+\
@@ -367,14 +372,9 @@ if __name__ == '__main__':
     if len(command) >= 3:
         vocab_path = command[1] 
         index_path = command[2]
-        json_path = command[3]  ##path of the folder of json data when option = 'vocab'
-                                ##when option == 'BTM' this is the path to the index file
+        j_path = command[3]  ##path of the folder of json data when option = 'vocab'
+                             ##when option == 'BTM' this is the path to the index file
         platform = command[4]
-        #json_path = ['./scraper_data/twitter/opioids/xannax/','./scraper_data/twitter/opioids/xanax/']
-        #json_path = ['./scraper_data/tumblr/opioids/xannax/','./scraper_data/tumblr/opioids/xanax/']
-        #json_path = ['/data2/opioids/tumblr/opioids_data/opioids/']
-        #json_path = ['/data1/data/twitter/data/opioids/']
-        #json_path = ['/data2/opioids/reddit/opioids_test/opioids/']
 
         if option == "vocab":
             word_vocab = []
@@ -395,27 +395,24 @@ if __name__ == '__main__':
                 if len(text_list) == 0:
                     continue
                 word_vocab += collect_words(text_list,word_vocab)
-                print("Number of words id " + str(len(word_vocab)))
+                print("Number of words is " + str(len(word_vocab)))
             write_vocab(word_vocab,vocab_path)
             
             word_vocab = read_vocab(vocab_path)
-            for j_path in json_path:
-                for index,filename in enumerate(sorted(os.listdir(j_path))):
-                    #print(j_path + filename + '/')
-                    if filename[-5:] == '.json':
-                        text_list = read_json(j_path+filename)
-                    elif os.path.exists(j_path + filename + '/'):
+            for index,filename in enumerate(sorted(os.listdir(j_path))):
+                #print(j_path + filename + '/')
+                if filename[-5:] == '.json':
+                    text_list = read_json(j_path+filename,platform)
+                elif os.path.exists(j_path + filename + '/'):
                         
-                        j_file = j_path + filename + '/'
-                        text_list = read_folder(j_file)
-                    else:
-                        continue
+                    j_file = j_path + filename + '/'
+                    text_list = read_folder(j_file,platform)
+                else:
+                    continue
 
-                    index_list += get_index(text_list,word_vocab)
-                    print('Finish index generation on ' + str(filename))
-
-            print('The total number of text is ' + str(len(index_list)))
-            
+                index_list += get_index(text_list,word_vocab)
+                print('Finish index generation on ' + str(filename))
+            print('The total number of text is ' + str(len(index_list)))            
             write_index(index_list,index_path)
             
 
